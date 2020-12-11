@@ -76,9 +76,29 @@ Resources are the most important element in the Terraform language. Each resourc
 
 In this case, we are creating a new Azure `Resource Group` (note this is an Azure specific construct, similar to a folder for associating your Azure resources). Add in the following block to the end of your `main.tf` file:
 ```
-resource "azurerm_resource_group" "rg" {
-  name = "<your_resource_group_name>"
+resource "azurerm_resource_group" "example_rg" {
+  name = "<uid>-test"
   location = "westus"
+}
+
+resource "azurerm_network_security_group" "example_nsg" {
+  name                = "<uid>-test-nsg"
+  location            = azurerm_resource_group.example_rg.location
+  resource_group_name = azurerm_resource_group.example_rg.name
+}
+
+resource "azurerm_network_security_rule" "example_nsr" {
+  name                        = "<uid>-test-nsr"
+  priority                    = 100
+  direction                   = "Outbound"
+  access                      = "Allow"
+  protocol                    = "Tcp"
+  source_port_range           = "5555"
+  destination_port_range      = "6666"
+  source_address_prefix       = "*"
+  destination_address_prefix  = "*"
+  resource_group_name         = azurerm_resource_group.example_rg.name
+  network_security_group_name = azurerm_network_security_group.example_nsg.name
 }
 ```
 
@@ -88,16 +108,45 @@ The terraform plan command is used to create an execution plan. Terraform perfor
 $ terraform plan
 ```
 
-Review the output to make sure 
+Review the output to make sure the changes you're expecting are being made.
 
 ## Terraform Apply
+If you're satisfied, you can now apply your changes. A plan will run again, and you will need to confirm the changes.
+```
+$ terraform apply
+...
+Plan: X to add, Y to change, Z to destroy.
 
-## Modify a resource
+Do you want to perform these actions?
+  Terraform will perform the actions described above.
+  Only 'yes' will be accepted to approve.
+
+  Enter a value: yes
+...
+Apply complete! Resources: X added, Y changed, Z destroyed.
+```
 
 ## Inspect Terraform state file
+You should see a `terraform.tfstate` file created in the top-level directory. The state file is a critical component of the Terraform architecture. It keeps a mapping between the modules you defined your code and the actual resources created by cloud provider.
+
+## Modify a resource
+In `main.tf`, update the `destination_port_range` to `7777`. Now, let's re-run the apply and see what happens.
+```
+$ terraform apply
+```
 
 ## Check for drift and re-sync
+Go to the Azure Portal and update your NSG rule's source port range to `6666`. 
 
-## Terraform Import
+Now run Terraform Apply again and see what happens.
+```
+$ terraform apply
+```
 
 ## Terraform Destroy
+Finally, let's clean everything up and destroy all the resouces we created.
+```
+$ terraform destory
+```
+
+Check the Azure Portal to verify that all the resources have been deleted. Also, take a look at the `terraform.tfstate` file and see how it changed.
